@@ -1,42 +1,55 @@
 import React, { Component } from 'react'
 import BountiesContract from '../build/contracts/Bounties.json'
-import { setJSON, getJSON } from './utils/IPFS.js'
+import getWeb3 from './utils/getWeb3'
+
 import {Form, FormGroup, FormControl, Button, HelpBlock, Grid, Row, Panel} from 'react-bootstrap'
 var ReactBsTable  = require('react-bootstrap-table');
 var BootstrapTable = ReactBsTable.BootstrapTable;
 var TableHeaderColumn = ReactBsTable.TableHeaderColumn;
 
-
 import './css/oswald.css'
 import './css/open-sans.css'
 import './css/pure-min.css'
 import './App.css'
+import './bootstrap.css';
 import '../node_modules/react-bootstrap-table/dist/react-bootstrap-table-all.min.css';
 
-const ipfsBaseUrl = "https://ipfs.infura.io/ipfs";
 const etherscanBaseUrl = "https://rinkeby.etherscan.io"
 
 class App extends Component {
-  constructor(props,context) {
+  constructor(props) {
     super(props)
 
     this.state = {
-      web3: window.web3,
+      storageValue: 0,
       bountiesInstance: undefined,
       bountyAmount: undefined,
       bountyData: undefined,
       bountyDeadline: undefined,
       etherscanLink: "https://rinkeby.etherscan.io",
-      bounties: []
+      web3: null
     }
 
     this.handleIssueBounty = this.handleIssueBounty.bind(this)
     this.handleChange = this.handleChange.bind(this)
-
   }
 
   componentWillMount() {
-    this.instantiateContract()
+    // Get network provider and web3 instance.
+    // See utils/getWeb3 for more info.
+
+    getWeb3
+    .then(results => {
+      this.setState({
+        web3: results.web3
+      })
+
+      // Instantiate contract once web3 provided.
+      this.instantiateContract()
+    })
+    .catch(() => {
+      console.log('Error finding web3.')
+    })
   }
 
   async instantiateContract() {
@@ -47,45 +60,14 @@ class App extends Component {
      * state management library, but for convenience I've placed them here.
      */
 
-    const contract = require('truffle-contract')
-    const bounties = contract(BountiesContract)
+     const contract = require('truffle-contract')
+     const bounties = contract(BountiesContract)
 
-    bounties.setProvider(this.state.web3.currentProvider)
+     bounties.setProvider(this.state.web3.currentProvider)
 
 
-    let instance = await bounties.deployed()
-    this.setState({ bountiesInstance: instance })
-    this.addEventListener(this)
-
-  }
-
-  addEventListener(component) {
-
-    var bountyIssuedEvent = this.state.bountiesInstance.allEvents({fromBlock: 0, toBlock: 'latest'})
-
-    bountyIssuedEvent.watch(async function(err, result) {
-      if (err) {
-        console.log(err)
-        return
-      }
-
-      if(result.args)
-      {
-        if(result.event === "BountyIssued")
-        {
-          var newBountiesArray = component.state.bounties.slice()
-
-          //First get the data from ipfs and add it to the result
-
-          let ipfsJson = await getJSON(result.args.data);
-          result.args['bountyData'] = ipfsJson.bountyData;
-          result.args['ipfsData'] = ipfsBaseUrl+"/"+result.args.data;
-          newBountiesArray.push(result.args)
-          component.setState({ bounties: newBountiesArray })
-        }
-      }
-
-    })
+     let instance = await bounties.deployed()
+     this.setState({ bountiesInstance: instance })
   }
 
   // Handle form data change
@@ -113,8 +95,8 @@ class App extends Component {
   {
     if (typeof this.state.bountiesInstance !== 'undefined') {
       event.preventDefault();
-      const ipfsHash = await setJSON({ bountyData: this.state.bountyData });
-      let result = await this.state.bountiesInstance.issueBounty(ipfsHash,this.state.bountyDeadline,{from: this.state.web3.eth.accounts[0], value: this.state.web3.toWei(this.state.bountyAmount, 'ether')})
+      //const ipfsHash = await setJSON({ bountyData: this.state.bountyData });
+      let result = await this.state.bountiesInstance.issueBounty(this.state.bountyData,this.state.bountyDeadline,{from: this.state.web3.eth.accounts[0], value: this.state.web3.toWei(this.state.bountyAmount, 'ether')})
       this.setLastTransactionDetails(result)
     }
   }
@@ -130,6 +112,8 @@ class App extends Component {
       this.setState({etherscanLink: etherscanBaseUrl})
     }
   }
+
+
 
   render() {
     return (
@@ -184,7 +168,6 @@ class App extends Component {
           <TableHeaderColumn isKey dataField='bounty_id'>ID</TableHeaderColumn>
           <TableHeaderColumn dataField='issuer'>Issuer</TableHeaderColumn>
           <TableHeaderColumn dataField='amount'>Amount</TableHeaderColumn>
-          <TableHeaderColumn dataField='ipfsData'>Bounty Data</TableHeaderColumn>
           <TableHeaderColumn dataField='bountyData'>Bounty Data</TableHeaderColumn>
         </BootstrapTable>
         </Panel>
