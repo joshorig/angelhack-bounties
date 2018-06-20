@@ -27,6 +27,7 @@ class App extends Component {
       bountyData: undefined,
       bountyDeadline: undefined,
       etherscanLink: "https://rinkeby.etherscan.io",
+      bounties: [],
       web3: null
     }
 
@@ -81,6 +82,8 @@ class App extends Component {
         return
       }
 
+      console.log(result)
+
       if(result.args)
       {
         if(result.event === "BountyIssued")
@@ -89,9 +92,9 @@ class App extends Component {
 
           //First get the data from ipfs and add it to the result
 
-          let ipfsJson = await getJSON(result.args.data);
-          result.args['bountyData'] = ipfsJson.bountyData;
-          result.args['ipfsData'] = ipfsBaseUrl+"/"+result.args.data;
+          //let ipfsJson = await getJSON(result.args.data);
+          //result.args['bountyData'] = ipfsJson.bountyData;
+          //result.args['ipfsData'] = ipfsBaseUrl+"/"+result.args.data;
           newBountiesArray.push(result.args)
           component.setState({ bounties: newBountiesArray })
         }
@@ -198,7 +201,7 @@ class App extends Component {
           <TableHeaderColumn isKey dataField='bounty_id'>ID</TableHeaderColumn>
           <TableHeaderColumn dataField='issuer'>Issuer</TableHeaderColumn>
           <TableHeaderColumn dataField='amount'>Amount</TableHeaderColumn>
-          <TableHeaderColumn dataField='bountyData'>Bounty Data</TableHeaderColumn>
+          <TableHeaderColumn dataField='data'>Bounty Data</TableHeaderColumn>
         </BootstrapTable>
         </Panel>
         </Row>
